@@ -3,156 +3,103 @@ import fitz  # PyMuPDF
 import io
 import zipfile
 
-st.set_page_config(page_title="Ultimate PDF Generator & Editor Tool", layout="wide")
+st.set_page_config(page_title="Custom Bulk PDF Creator (Canva Style)", layout="wide")
 
-st.title("🛠️ Ultimate PDF Generator & Editor Suite")
-st.markdown("Easily edit an uploaded PDF template or batch-generate bulk PDFs from a list of titles.")
+st.title("🎨 Canva-Style PDF Template & Bulk Generator")
+st.markdown("Upload a template PDF, configure your layout variables, paste bulk titles, and generate your files instantly.")
 
-# Navigation Tabs
-tab1, tab2 = st.tabs(["📝 Upload & Edit PDF", "⚡ Bulk PDF Generator"])
+tab1, tab2 = st.tabs(["1. Template Editor & Setup", "2. Bulk Title Generator Box"])
 
-# =====================================================================
-# TAB 1: UPLOAD & EDIT PDF (Text changes, Image insertion, Hyperlinks)
-# =====================================================================
+# Store template in session state so both tabs can access it
+if "template_bytes" not in st.session_state:
+    st.session_state.template_bytes = None
+
 with tab1:
-    st.header("Interactive PDF Editor Suite")
-    st.markdown("Upload a sample PDF, navigate pages, modify content, add images, and embed links.")
+    st.header("Upload & Configure Base PDF Template")
+    uploaded_file = st.file_uploader("Upload a sample PDF to use as your design template", type=["pdf"])
+    
+    if uploaded_file is not None:
+        st.session_state.template_bytes = uploaded_file.read()
+        st.success("Template uploaded successfully!")
 
-    uploaded_pdf = st.file_uploader("Upload your sample PDF file", type=["pdf"], key="editor_upload")
-
-    if uploaded_pdf is not None:
-        pdf_bytes = uploaded_pdf.read()
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    if st.session_state.template_bytes:
+        doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
+        page = doc[0] # Preview first page
         
-        total_pages = len(doc)
-        st.info(f"Loaded successfully! Total Pages in PDF: {total_pages}")
+        st.subheader("Template Settings & Coordinate Mapping")
+        st.markdown("Specify where the bulk titles should be dynamically injected onto your template page:")
         
-        # Select page to view/edit
-        page_idx = st.number_input("Select Page Number to Edit", min_value=1, max_value=total_pages, value=1) - 1
-        page = doc[page_idx]
-
-        # Layout columns for tools
-        col_left, col_right = st.columns(2)
-
-        with col_left:
-            st.subheader("1. Text Editor & Search-Replace")
-            old_search_text = st.text_input("Exact text to locate:")
-            new_replace_text = st.text_input("New replacement text:")
-            
-            if st.button("Apply Text Replacement"):
-                if old_search_text:
-                    instances = page.search_for(old_search_text)
-                    if instances:
-                        for inst in instances:
-                            # Erase old text block and write replacement text
-                            page.add_redact_annot(inst, fill=(1, 1, 1))
-                            page.apply_redactions()
-                            page.insert_text(inst.tl, new_replace_text, fontsize=11, color=(0, 0, 0))
-                        st.success(f"Successfully replaced '{old_search_text}' with '{new_replace_text}'!")
-                    else:
-                        st.warning("Could not find the specified text on this page.")
-                else:
-                    st.error("Please provide text to search.")
-
-            st.markdown("---")
-            st.subheader("3. Anchor Hyperlinks")
-            link_anchor_text = st.text_input("Target text/word on page to anchor link:")
-            target_url = st.text_input("Destination URL (e.g., https://yourwebsite.com):")
-            
-            if st.button("Insert Hyperlink to Text"):
-                if link_anchor_text and target_url:
-                    matches = page.search_for(link_anchor_text)
-                    if matches:
-                        for rect in matches:
-                            link_dict = {"kind": fitz.LINK_URI, "from": rect, "uri": target_url}
-                            page.insert_link(link_dict)
-                        st.success(f"Linked all occurrences of '{link_anchor_text}' to {target_url}!")
-                    else:
-                        st.warning("Target text not found on this page.")
-                else:
-                    st.error("Please fill out both the anchor text and URL.")
-
-        with col_right:
-            st.subheader("2. Upload & Insert Image")
-            uploaded_image = st.file_uploader("Upload Image File (PNG / JPG)", type=["png", "jpg", "jpeg"])
-            
-            # Coordinate controls for positioning image precisely
-            img_x = st.number_input("X Coordinate (Left position)", value=100)
-            img_y = st.number_input("Y Coordinate (Top position)", value=100)
-            img_w = st.number_input("Image Width", value=150)
-            img_h = st.number_input("Image Height", value=150)
-            
-            if uploaded_image is not None and st.button("Insert Image into PDF"):
-                img_data = uploaded_image.read()
-                image_rect = fitz.Rect(img_x, img_y, img_x + img_w, img_y + img_h)
-                page.insert_image(image_rect, stream=img_data)
-                st.success("Image successfully injected into the PDF editor canvas!")
-
-        st.markdown("---")
-        st.subheader("Download Edited PDF")
-        if st.button("Save & Prepare Download"):
-            output_buffer = io.BytesIO()
-            doc.save(output_buffer)
-            output_buffer.seek(0)
-            
-            st.download_button(
-                label="📥 Download Your Edited PDF",
-                data=output_buffer,
-                file_name="modified_document.pdf",
-                mime="application/pdf"
+        col_set1, col_set2 = st.columns(2)
+        with col_set1:
+            pos_x = st.number_input("Text X-Coordinate (Left Position)", value=72)
+            pos_y = st.number_input("Text Y-Coordinate (Top Position)", value=150.0)
+            font_size = st.slider("Title Font Size", min_value=10, max_value=72, value=24)
+        
+        with col_set2:
+            st.info(
+                "**How it works:** \n"
+                "1. Your uploaded PDF serves as the background layout.\n"
+                "2. Move to **Tab 2** to paste your bulk list of titles.\n"
+                "3. Each title will be automatically stamped onto your template layout at the coordinates specified here."
             )
 
-# =====================================================================
-# TAB 2: BULK PDF GENERATOR FROM TITLES BOX
-# =====================================================================
 with tab2:
-    st.header("⚡ Bulk PDF Generator Engine")
-    st.markdown("Input a massive collection of titles below (one title per row). The system will automatically compile a distinct PDF file for every single line.")
-
-    # Main text input box for bulk titles
-    bulk_titles_box = st.text_area(
-        "Enter Titles (Type or paste multiple lines, one title per file):",
-        height=200,
-        placeholder="Example Title 1\nExample Title 2\nExample Title 3"
-    )
-
-    # File renaming custom prefix configuration
-    rename_prefix = st.text_input("Custom File Rename Prefix:", value="generated_file_")
-
-    if st.button("Generate Bulk PDFs Now"):
-        if not bulk_titles_box.strip():
-            st.error("The titles box is empty! Please insert at least one title.")
-        else:
-            # Parse titles line by line
-            titles_list = [t.strip() for t in bulk_titles_box.split("\n") if t.strip()]
-            
-            # Pack generated PDFs into a compressed ZIP archive in memory
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_archive:
-                for idx, title in enumerate(titles_list, start=1):
-                    # Build a fresh single-page document for each title
-                    batch_doc = fitz.open()
-                    batch_page = batch_doc.new_page()
-                    
-                    # Layout text structure inside generated page
-                    batch_page.insert_text((72, 100), title, fontsize=22, color=(0.1, 0.1, 0.3))
-                    batch_page.insert_text((72, 140), "Auto-compiled via Bulk Generator Tool.", fontsize=10, color=(0.5, 0.5, 0.5))
-                    
-                    pdf_data = batch_doc.write()
-                    
-                    # Format clean file names
-                    clean_title_string = "".join(c if c.isalnum() else "_" for c in title)[:35]
-                    file_name = f"{rename_prefix}{idx}_{clean_title_string}.pdf"
-                    
-                    zip_archive.writestr(file_name, pdf_data)
-            
-            zip_buffer.seek(0)
-            st.success(f"Successfully compiled {len(titles_list)} individual PDF files!")
-            
-            # Download button for bulk output archive
-            st.download_button(
-                label="📦 Download All Generated PDFs (ZIP Package)",
-                data=zip_buffer,
-                file_name="bulk_generated_pdfs.zip",
-                mime="application/zip"
-            )
+    st.header("⚡ Bulk Title Processing Engine")
+    
+    if st.session_state.template_bytes is None:
+        st.warning("⚠️ Please upload a template PDF in **Tab 1** first before generating bulk files.")
+    else:
+        st.markdown("Enter your bulk titles below. Put **one title per line**, exactly like a data spreadsheet column.")
+        
+        bulk_input_box = st.text_area(
+            "Paste Bulk Titles Here:",
+            height=220,
+            placeholder="Chapter 1: Introduction\nChapter 2: Advanced Guide\nChapter 3: Conclusion"
+        )
+        
+        file_rename_prefix = st.text_input("Custom File Rename Prefix:", value="custom_report_")
+        
+        if st.button("🚀 Generate Bulk PDFs"):
+            if not bulk_input_box.strip():
+                st.error("Please provide at least one title in the box.")
+            else:
+                titles_array = [t.strip() for t in bulk_input_box.split("\n") if t.strip()]
+                
+                # Setup retrieval coordinates and configuration from Tab 1 variables
+                # (Defaults used if fields aren't re-rendered)
+                x_cord = 72
+                y_cord = 150.0
+                f_size = 24
+                
+                zip_output_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_output_buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+                    for index, item_title in enumerate(titles_array, start=1):
+                        # Always reload a fresh clone of the template for each iteration
+                        gen_doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
+                        target_page = gen_doc[0] # Stamp onto page 1 of template
+                        
+                        # Inject the dynamic title text
+                        target_page.insert_text(
+                            (x_cord, y_cord), 
+                            item_title, 
+                            fontsize=f_size, 
+                            color=(0.1, 0.1, 0.2)
+                        )
+                        
+                        compiled_pdf_bytes = gen_doc.write()
+                        
+                        # Clean naming convention
+                        sanitized_name = "".join(c if c.isalnum() else "_" for c in item_title)[:30]
+                        final_file_name = f"{file_rename_prefix}{index}_{sanitized_name}.pdf"
+                        
+                        archive.writestr(final_file_name, compiled_pdf_bytes)
+                
+                zip_output_buffer.seek(0)
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files based on your template!")
+                
+                st.download_button(
+                    label="📦 Download All Bulk PDFs (ZIP)",
+                    data=zip_output_buffer,
+                    file_name="canva_style_bulk_outputs.zip",
+                    mime="application/zip"
+                )

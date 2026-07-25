@@ -42,7 +42,7 @@ with tab1:
             st.info(
                 "**How it works:** \n"
                 "1. The tool searches your uploaded PDF for the exact text specified on the left.\n"
-                "2. It calculates the center coordinates and renders your new title **bold and centered**.\n"
+                "2. It automatically computes alignment to center the new title and applies bold formatting.\n"
                 "3. It cleanly replaces it **only once** with each new item from **Tab 2**."
             )
 
@@ -79,17 +79,17 @@ with tab2:
                         # Search for the exact existing title coordinates on the page
                         text_instances = target_page.search_for(search_query)
                         
+                        # Use built-in short code for bold Helvetica ("hebo")
+                        font_name = "hebo"
+                        
                         if text_instances:
                             rect = text_instances[0]
                             
                             # Draw a white box over just that single matched area to erase it
                             target_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
                             
-                            # Use standard base font specification for bold formatting
-                            font_name = "helv-bold"
-                            
-                            # Measure text width using standard Base-14 code string for calculation compatibility
-                            text_width = fitz.get_text_length(item_title, fontname="helv", fontsize=font_size)
+                            # Measure text width using the bold font code for accurate centering
+                            text_width = fitz.get_text_length(item_title, fontname=font_name, fontsize=font_size)
                             original_width = rect.x1 - rect.x0
                             
                             # Center alignment coordinate calculation
@@ -110,7 +110,7 @@ with tab2:
                             target_page.insert_text(
                                 (72, 150.0), 
                                 item_title, 
-                                fontname="helv-bold",
+                                fontname=font_name,
                                 fontsize=font_size, 
                                 color=(0.1, 0.1, 0.2)
                             )

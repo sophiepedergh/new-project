@@ -42,7 +42,7 @@ with tab1:
             st.info(
                 "**How it works:** \n"
                 "1. The tool locates your target title position vertically.\n"
-                "2. It creates a wide text container spanning safely across the page width to prevent any vanishing characters.\n"
+                "2. It uses an HTML-enabled rendering box that fully supports special characters like %, &, [, ], etc.\n"
                 "3. It replaces your text cleanly **once**, bolding and center-aligning your literal titles."
             )
 
@@ -57,7 +57,7 @@ with tab2:
         bulk_input_box = st.text_area(
             "Paste Bulk Titles Here (with double quotes):",
             height=220,
-            placeholder="\"Instantly Views In A Click - Free TikTok Followers & Likes 2026 (Boost Guide) [QJ5))]\"\n\"Free Tiktok Followers Generator 2026: Boost Your Presence Instantly [ptiz]\""
+            placeholder="\"Instantly Views In A Click - Free TikTok Followers & Likes 2026 (Boost Guide) [QJ5))]\"\n\"100%-SAFE! Free TikTok Followers in 5 Minutes! Boost 1000 Likes & Views [8DJTG]\""
         )
         
         file_rename_prefix = st.text_input("Custom File Rename Prefix:", value="tiktok_report_")
@@ -89,44 +89,39 @@ with tab2:
                         # Search for the exact existing title coordinates on the page
                         text_instances = target_page.search_for(search_query)
                         
-                        # Use built-in short code for bold Helvetica ("hebo")
-                        font_name = "hebo"
-                        
                         if text_instances:
                             rect = text_instances[0]
                             
-                            # Define a wide, secure layout box spanning across page margins (leaving 36pt margins on left and right)
+                            # Define a wide, secure layout box spanning across page margins
                             margin = 36
                             box_x0 = margin
                             box_x1 = page_rect.width - margin
                             box_y0 = rect.y0 - 5
-                            box_y1 = rect.y1 + 45  # Enough vertical clearance for multi-line text wrapping if long
+                            box_y1 = rect.y1 + 55  # Vertical clearance for multi-line wrapping
                             
                             wide_rect = fitz.Rect(box_x0, box_y0, box_x1, box_y1)
                             
                             # Completely erase the old title area safely with a white block
                             target_page.draw_rect(wide_rect, color=(1, 1, 1), fill=(1, 1, 1))
                             
-                            # Insert text box with auto-wrapping and center alignment, keeping all special characters literal
-                            target_page.insert_textbox(
-                                wide_rect,
-                                item_title,
-                                fontname=font_name,
-                                fontsize=font_size,
-                                color=(0.1, 0.1, 0.2),
-                                align=fitz.TEXT_ALIGN_CENTER
-                            )
+                            # Format text cleanly using HTML tags for absolute character safety and centering/bolding
+                            html_content = f"""
+                            <div style="text-align: center; font-size: {font_size}px; font-weight: bold; color: #1a1a33; font-family: Helvetica, sans-serif;">
+                                {item_title}
+                            </div>
+                            """
+                            
+                            # Insert via htmlbox to ensure special symbols (&, %, [, ], etc.) parse and render 100% correctly
+                            target_page.insert_htmlbox(wide_rect, html_content)
                         else:
                             # Fallback default box if text isn't found verbatim
-                            fallback_rect = fitz.Rect(36, 150, page_rect.width - 36, 220)
-                            target_page.insert_textbox(
-                                fallback_rect,
-                                item_title,
-                                fontname=font_name,
-                                fontsize=font_size,
-                                color=(0.1, 0.1, 0.2),
-                                align=fitz.TEXT_ALIGN_CENTER
-                            )
+                            fallback_rect = fitz.Rect(36, 150, page_rect.width - 36, 230)
+                            html_fallback = f"""
+                            <div style="text-align: center; font-size: {font_size}px; font-weight: bold; color: #1a1a33; font-family: Helvetica, sans-serif;">
+                                {item_title}
+                            </div>
+                            """
+                            target_page.insert_htmlbox(fallback_rect, html_fallback)
                         
                         compiled_pdf_bytes = gen_doc.write()
                         
@@ -137,7 +132,7 @@ with tab2:
                         archive.writestr(final_file_name, compiled_pdf_bytes)
                 
                 zip_output_buffer.seek(0)
-                st.success(f"Successfully generated {len(titles_array)} unique PDF files with full-width text substitution!")
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files with full special character support!")
                 
                 st.download_button(
                     label="📦 Download All Bulk PDFs (ZIP)",

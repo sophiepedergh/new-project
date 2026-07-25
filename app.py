@@ -1,4 +1,21 @@
-if st.button("🚀 Generate Bulk PDFs"):
+with tab2:
+    st.header("⚡ Bulk Title Processing Engine")
+    
+    if st.session_state.template_bytes is None:
+        st.warning("⚠️ Please upload a template PDF in **Tab 1** first before generating bulk files.")
+    else:
+        st.markdown("Enter your bulk titles below. Wrap each title in **double quotes** (one per line):")
+        
+        bulk_input_box = st.text_area(
+            "Paste Bulk Titles Here (with double quotes):",
+            height=220,
+            placeholder="\"Instantly Views In A Click - Free TikTok Followers & Likes 2026 (Boost Guide) [QJ5))]\"\n\"100%-SAFE! Free TikTok Followers in 5 Minutes! Boost 1000 Likes & Views [8DJTG]\""
+        )
+        
+        file_rename_prefix = st.text_input("Custom File Rename Prefix:", value="tiktok_report_")
+        
+        # Ensure this button is correctly indented under Tab 2
+        if st.button("🚀 Generate Bulk PDFs"):
             if not bulk_input_box.strip():
                 st.error("Please provide at least one title in the box.")
             else:

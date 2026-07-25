@@ -6,7 +6,7 @@ import zipfile
 st.set_page_config(page_title="Custom Bulk PDF Creator (Canva Style)", layout="wide")
 
 st.title("🎨 Canva-Style PDF Template & Bulk Generator")
-st.markdown("Upload a template PDF, specify the existing title to target, paste your bulk titles, and generate your files instantly.")
+st.markdown("Upload a template PDF, specify the existing title to target, paste your bulk titles in double quotes, and generate your files instantly.")
 
 tab1, tab2 = st.tabs(["1. Template Editor & Setup", "2. Bulk Title Generator Box"])
 
@@ -41,9 +41,9 @@ with tab1:
         with col_set2:
             st.info(
                 "**How it works:** \n"
-                "1. The tool searches your uploaded PDF for the exact text specified on the left.\n"
-                "2. It automatically computes alignment to center the new title and applies bold formatting.\n"
-                "3. It cleanly replaces it **only once** with each new item from **Tab 2**."
+                "1. The tool searches your uploaded PDF for the exact target text.\n"
+                "2. It reads your bulk titles wrapped in double quotes (e.g. `\"Title\"`) and extracts every character literally.\n"
+                "3. It replaces the title **only once**, center-aligning and applying bold formatting."
             )
 
 with tab2:
@@ -52,12 +52,12 @@ with tab2:
     if st.session_state.template_bytes is None:
         st.warning("⚠️ Please upload a template PDF in **Tab 1** first before generating bulk files.")
     else:
-        st.markdown("Enter your bulk titles below. Put **one title per line**:")
+        st.markdown("Enter your bulk titles below. Wrap each title in **double quotes** (one per line):")
         
         bulk_input_box = st.text_area(
-            "Paste Bulk Titles Here:",
+            "Paste Bulk Titles Here (with double quotes):",
             height=220,
-            placeholder="Free Tiktok Followers Generator 2026: Boost Your Presence Instantly [ptiz]\nFree Tiktok Followers Generator 2026: Boost Your Presence Instantly [E7WW4w]"
+            placeholder="\"Free Tiktok Followers Generator 2026: Boost Your Presence Instantly [ptiz]\"\n\"Free Tiktok Followers Generator 2026: Boost Your Presence Instantly [E7WW4w]\""
         )
         
         file_rename_prefix = st.text_input("Custom File Rename Prefix:", value="tiktok_report_")
@@ -66,7 +66,16 @@ with tab2:
             if not bulk_input_box.strip():
                 st.error("Please provide at least one title in the box.")
             else:
-                titles_array = [t.strip() for t in bulk_input_box.split("\n") if t.strip()]
+                raw_lines = [t.strip() for t in bulk_input_box.split("\n") if t.strip()]
+                titles_array = []
+                
+                # Extract text precisely from inside double quotes if present
+                for line in raw_lines:
+                    if line.startswith('"') and line.endswith('"') and len(line) >= 2:
+                        titles_array.append(line[1:-1])
+                    else:
+                        titles_array.append(line)
+                
                 search_query = target_text_to_replace if 'target_text_to_replace' in locals() and target_text_to_replace else "Boost Your Instagram Profile: Get Free Ig Likes in 2026 [CxD+9JH]"
                 
                 zip_output_buffer = io.BytesIO()
@@ -97,7 +106,7 @@ with tab2:
                             if centered_x < rect.x0:
                                 centered_x = rect.x0 # Prevent text bleeding past left edge if too long
                                 
-                            # Insert the new bold, center-aligned title
+                            # Insert the new bold, center-aligned title with all special characters intact
                             target_page.insert_text(
                                 (centered_x, rect.y1), 
                                 item_title, 
@@ -124,7 +133,7 @@ with tab2:
                         archive.writestr(final_file_name, compiled_pdf_bytes)
                 
                 zip_output_buffer.seek(0)
-                st.success(f"Successfully generated {len(titles_array)} unique PDF files with centered, bold title replacements!")
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files with exact literal string character mapping!")
                 
                 st.download_button(
                     label="📦 Download All Bulk PDFs (ZIP)",

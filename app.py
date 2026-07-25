@@ -36,14 +36,14 @@ with tab1:
                 value="Boost Your Instagram Profile: Get Free Ig Likes in 2026 [CxD+9JH]", 
                 help="Paste the exact title text currently sitting on your PDF design template."
             )
-            font_size = st.slider("Replacement Font Size (Optional adjustment)", min_value=10, max_value=72, value=16)
+            font_size = st.slider("Replacement Font Size (Optional adjustment)", min_value=10, max_value=48, value=15)
         
         with col_set2:
             st.info(
                 "**How it works:** \n"
-                "1. The tool searches your uploaded PDF for the exact target text.\n"
-                "2. It uses a dynamic text box container matching your layout width to safely handle long titles with special characters.\n"
-                "3. It replaces the title **only once**, center-aligning and applying bold formatting."
+                "1. The tool locates your target title position vertically.\n"
+                "2. It creates a wide text container spanning safely across the page width to prevent any vanishing characters.\n"
+                "3. It replaces your text cleanly **once**, bolding and center-aligning your literal titles."
             )
 
 with tab2:
@@ -84,6 +84,7 @@ with tab2:
                         # Always reload a fresh clone of the template for each iteration
                         gen_doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
                         target_page = gen_doc[0] # Stamp onto page 1 of template
+                        page_rect = target_page.rect # Get full dimensions of the PDF page
                         
                         # Search for the exact existing title coordinates on the page
                         text_instances = target_page.search_for(search_query)
@@ -94,15 +95,21 @@ with tab2:
                         if text_instances:
                             rect = text_instances[0]
                             
-                            # Expand the box height slightly to accommodate multi-line wrapping if the title is long
-                            expanded_rect = fitz.Rect(rect.x0, rect.y0 - 5, rect.x1 + 100, rect.y1 + 40)
+                            # Define a wide, secure layout box spanning across page margins (leaving 36pt margins on left and right)
+                            margin = 36
+                            box_x0 = margin
+                            box_x1 = page_rect.width - margin
+                            box_y0 = rect.y0 - 5
+                            box_y1 = rect.y1 + 45  # Enough vertical clearance for multi-line text wrapping if long
                             
-                            # Draw a white box over the matched area to erase the old title completely
-                            target_page.draw_rect(expanded_rect, color=(1, 1, 1), fill=(1, 1, 1))
+                            wide_rect = fitz.Rect(box_x0, box_y0, box_x1, box_y1)
                             
-                            # Insert text box with auto-wrapping and center alignment (`fitz.TEXT_ALIGN_CENTER`)
+                            # Completely erase the old title area safely with a white block
+                            target_page.draw_rect(wide_rect, color=(1, 1, 1), fill=(1, 1, 1))
+                            
+                            # Insert text box with auto-wrapping and center alignment, keeping all special characters literal
                             target_page.insert_textbox(
-                                expanded_rect,
+                                wide_rect,
                                 item_title,
                                 fontname=font_name,
                                 fontsize=font_size,
@@ -111,7 +118,7 @@ with tab2:
                             )
                         else:
                             # Fallback default box if text isn't found verbatim
-                            fallback_rect = fitz.Rect(72, 150, 500, 220)
+                            fallback_rect = fitz.Rect(36, 150, page_rect.width - 36, 220)
                             target_page.insert_textbox(
                                 fallback_rect,
                                 item_title,
@@ -130,7 +137,7 @@ with tab2:
                         archive.writestr(final_file_name, compiled_pdf_bytes)
                 
                 zip_output_buffer.seek(0)
-                st.success(f"Successfully generated {len(titles_array)} unique PDF files with full string support and auto-wrapping!")
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files with full-width text substitution!")
                 
                 st.download_button(
                     label="📦 Download All Bulk PDFs (ZIP)",

@@ -1,10 +1,26 @@
-zip_output_buffer = io.BytesIO()
+if st.button("🚀 Generate Bulk PDFs"):
+            if not bulk_input_box.strip():
+                st.error("Please provide at least one title in the box.")
+            else:
+                raw_lines = [t.strip() for t in bulk_input_box.split("\n") if t.strip()]
+                titles_array = []
+                
+                # Extract text precisely from inside double quotes if present
+                for line in raw_lines:
+                    if line.startswith('"') and line.endswith('"') and len(line) >= 2:
+                        titles_array.append(line[1:-1])
+                    else:
+                        titles_array.append(line)
+                
+                search_query = target_text_to_replace if 'target_text_to_replace' in locals() and target_text_to_replace else "Boost Your Instagram Profile: Get Free Ig Likes in 2026 [CxD+9JH]"
+                
+                zip_output_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_output_buffer, "w", zipfile.ZIP_DEFLATED) as archive:
                     for index, item_title in enumerate(titles_array, start=1):
                         # Always reload a fresh clone of the template for each iteration
                         gen_doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
                         
-                        # Set the internal PDF Title metadata (this controls the PDF / Browser tab title)
+                        # Set internal PDF Title metadata (matches browser/tab title)
                         gen_doc.set_metadata({"title": item_title})
                         
                         target_page = gen_doc[0] # Stamp onto page 1 of template
@@ -54,3 +70,13 @@ zip_output_buffer = io.BytesIO()
                         final_file_name = f"{file_rename_prefix}{index}_{sanitized_name}.pdf"
                         
                         archive.writestr(final_file_name, compiled_pdf_bytes)
+                
+                zip_output_buffer.seek(0)
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files with matching tab titles!")
+                
+                st.download_button(
+                    label="📦 Download All Bulk PDFs (ZIP)",
+                    data=zip_output_buffer,
+                    file_name="canva_style_bulk_outputs.zip",
+                    mime="application/zip"
+                )

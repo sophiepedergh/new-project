@@ -1,10 +1,10 @@
 zip_output_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_output_buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-                    for index, item_title in enumerate(titles_array, start=1):
+                    for item_title in titles_array:
                         # Always reload a fresh clone of the template for each iteration
                         gen_doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
                         
-                        # 1. Force internal metadata title to match the exact string
+                        # 1. Force internal document metadata to match the exact title
                         gen_doc.set_metadata({
                             "title": item_title,
                             "subject": item_title,
@@ -53,8 +53,8 @@ zip_output_buffer = io.BytesIO()
                         
                         compiled_pdf_bytes = gen_doc.write()
                         
-                        # 2. Strip prefixes and use the exact replaced title for the filename
-                        sanitized_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else "_" for c in item_title).strip()
+                        # 2. Use the exact replaced title for the file name (sanitized for file system safety)
+                        sanitized_name = "".join(c if c.isalnum() or c in (' ', '-', '_', '[', ']', '(', ')') else "_" for c in item_title).strip()
                         final_file_name = f"{sanitized_name}.pdf"
                         
                         archive.writestr(final_file_name, compiled_pdf_bytes)

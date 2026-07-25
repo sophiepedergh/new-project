@@ -6,7 +6,7 @@ import zipfile
 st.set_page_config(page_title="Custom Bulk PDF Creator (Canva Style)", layout="wide")
 
 st.title("🎨 Canva-Style PDF Template & Bulk Generator")
-st.markdown("Upload a template PDF, configure your layout variables, paste bulk titles, and generate your files instantly.")
+st.markdown("Upload a template PDF, configure your replacement tag, paste bulk titles, and generate your files instantly.")
 
 tab1, tab2 = st.tabs(["1. Template Editor & Setup", "2. Bulk Title Generator Box"])
 
@@ -26,21 +26,24 @@ with tab1:
         doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
         page = doc[0] # Preview first page
         
-        st.subheader("Template Settings & Coordinate Mapping")
-        st.markdown("Specify where the bulk titles should be dynamically injected onto your template page:")
+        st.subheader("Template Settings & Placeholder Mapping")
+        st.markdown("Specify the placeholder text in your template that should be replaced with your bulk titles:")
         
         col_set1, col_set2 = st.columns(2)
         with col_set1:
-            pos_x = st.number_input("Text X-Coordinate (Left Position)", value=72)
-            pos_y = st.number_input("Text Y-Coordinate (Top Position)", value=150.0)
-            font_size = st.slider("Title Font Size", min_value=10, max_value=72, value=24)
+            placeholder_text = st.text_input(
+                "Placeholder Variable to Find", 
+                value="{{TITLE}}", 
+                help="Enter the exact text string currently on your PDF template that you want to replace dynamically."
+            )
+            font_size = st.slider("Title Font Size (if new insertion)", min_value=10, max_value=72, value=24)
         
         with col_set2:
             st.info(
                 "**How it works:** \n"
                 "1. Your uploaded PDF serves as the background layout.\n"
-                "2. Move to **Tab 2** to paste your bulk list of titles.\n"
-                "3. Each title will be automatically stamped onto your template layout at the coordinates specified here."
+                "2. The app searches for your **Placeholder Variable** on page 1.\n"
+                "3. It removes the placeholder and injects each bulk title from **Tab 2** at that exact location."
             )
 
 with tab2:
@@ -64,12 +67,7 @@ with tab2:
                 st.error("Please provide at least one title in the box.")
             else:
                 titles_array = [t.strip() for t in bulk_input_box.split("\n") if t.strip()]
-                
-                # Setup retrieval coordinates and configuration from Tab 1 variables
-                # (Defaults used if fields aren't re-rendered)
-                x_cord = 72
-                y_cord = 150.0
-                f_size = 24
+                target_tag = placeholder_text if 'placeholder_text' in locals() and placeholder_text else "{{TITLE}}"
                 
                 zip_output_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_output_buffer, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -78,13 +76,31 @@ with tab2:
                         gen_doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
                         target_page = gen_doc[0] # Stamp onto page 1 of template
                         
-                        # Inject the dynamic title text
-                        target_page.insert_text(
-                            (x_cord, y_cord), 
-                            item_title, 
-                            fontsize=f_size, 
-                            color=(0.1, 0.1, 0.2)
-                        )
+                        # Search for the placeholder text coordinates on the page
+                        text_instances = target_page.search_for(target_tag)
+                        
+                        if text_instances:
+                            # Use the first occurrence found
+                            rect = text_instances[0]
+                            
+                            # Optional: Redact/Cover up the original placeholder tag area with white
+                            target_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+                            
+                            # Insert the dynamic title text at the top-left of the found rectangle
+                            target_page.insert_text(
+                                (rect.x0, rect.y1), 
+                                item_title, 
+                                fontsize=font_size, 
+                                color=(0.1, 0.1, 0.2)
+                            )
+                        else:
+                            # Fallback default coordinates if placeholder text isn't found on the page
+                            target_page.insert_text(
+                                (72, 150.0), 
+                                item_title, 
+                                fontsize=font_size, 
+                                color=(0.1, 0.1, 0.2)
+                            )
                         
                         compiled_pdf_bytes = gen_doc.write()
                         

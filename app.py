@@ -36,13 +36,13 @@ with tab1:
                 value="Boost Your Instagram Profile: Get Free Ig Likes in 2026 [CxD+9JH]", 
                 help="Paste the exact title text currently sitting on your PDF design template."
             )
-            font_size = st.slider("Replacement Font Size (Optional adjustment)", min_value=10, max_value=72, value=18)
+            font_size = st.slider("Replacement Font Size (Optional adjustment)", min_value=10, max_value=72, value=16)
         
         with col_set2:
             st.info(
                 "**How it works:** \n"
                 "1. The tool searches your uploaded PDF for the exact target text.\n"
-                "2. It reads your bulk titles wrapped in double quotes (e.g. `\"Title\"`) and extracts every character literally.\n"
+                "2. It uses a dynamic text box container matching your layout width to safely handle long titles with special characters.\n"
                 "3. It replaces the title **only once**, center-aligning and applying bold formatting."
             )
 
@@ -57,7 +57,7 @@ with tab2:
         bulk_input_box = st.text_area(
             "Paste Bulk Titles Here (with double quotes):",
             height=220,
-            placeholder="\"Free Tiktok Followers Generator 2026: Boost Your Presence Instantly [ptiz]\"\n\"Free Tiktok Followers Generator 2026: Boost Your Presence Instantly [E7WW4w]\""
+            placeholder="\"Instantly Views In A Click - Free TikTok Followers & Likes 2026 (Boost Guide) [QJ5))]\"\n\"Free Tiktok Followers Generator 2026: Boost Your Presence Instantly [ptiz]\""
         )
         
         file_rename_prefix = st.text_input("Custom File Rename Prefix:", value="tiktok_report_")
@@ -94,34 +94,31 @@ with tab2:
                         if text_instances:
                             rect = text_instances[0]
                             
-                            # Draw a white box over just that single matched area to erase it
-                            target_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+                            # Expand the box height slightly to accommodate multi-line wrapping if the title is long
+                            expanded_rect = fitz.Rect(rect.x0, rect.y0 - 5, rect.x1 + 100, rect.y1 + 40)
                             
-                            # Measure text width using the bold font code for accurate centering
-                            text_width = fitz.get_text_length(item_title, fontname=font_name, fontsize=font_size)
-                            original_width = rect.x1 - rect.x0
+                            # Draw a white box over the matched area to erase the old title completely
+                            target_page.draw_rect(expanded_rect, color=(1, 1, 1), fill=(1, 1, 1))
                             
-                            # Center alignment coordinate calculation
-                            centered_x = rect.x0 + (original_width - text_width) / 2
-                            if centered_x < rect.x0:
-                                centered_x = rect.x0 # Prevent text bleeding past left edge if too long
-                                
-                            # Insert the new bold, center-aligned title with all special characters intact
-                            target_page.insert_text(
-                                (centered_x, rect.y1), 
-                                item_title, 
+                            # Insert text box with auto-wrapping and center alignment (`fitz.TEXT_ALIGN_CENTER`)
+                            target_page.insert_textbox(
+                                expanded_rect,
+                                item_title,
                                 fontname=font_name,
-                                fontsize=font_size, 
-                                color=(0.1, 0.1, 0.2)
+                                fontsize=font_size,
+                                color=(0.1, 0.1, 0.2),
+                                align=fitz.TEXT_ALIGN_CENTER
                             )
                         else:
-                            # Fallback default alignment if text isn't found verbatim
-                            target_page.insert_text(
-                                (72, 150.0), 
-                                item_title, 
+                            # Fallback default box if text isn't found verbatim
+                            fallback_rect = fitz.Rect(72, 150, 500, 220)
+                            target_page.insert_textbox(
+                                fallback_rect,
+                                item_title,
                                 fontname=font_name,
-                                fontsize=font_size, 
-                                color=(0.1, 0.1, 0.2)
+                                fontsize=font_size,
+                                color=(0.1, 0.1, 0.2),
+                                align=fitz.TEXT_ALIGN_CENTER
                             )
                         
                         compiled_pdf_bytes = gen_doc.write()
@@ -133,7 +130,7 @@ with tab2:
                         archive.writestr(final_file_name, compiled_pdf_bytes)
                 
                 zip_output_buffer.seek(0)
-                st.success(f"Successfully generated {len(titles_array)} unique PDF files with exact literal string character mapping!")
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files with full string support and auto-wrapping!")
                 
                 st.download_button(
                     label="📦 Download All Bulk PDFs (ZIP)",

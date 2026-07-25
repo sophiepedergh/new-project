@@ -43,7 +43,7 @@ with tab1:
                 "**How it works:** \n"
                 "1. The tool searches your uploaded PDF for the exact text specified on the left.\n"
                 "2. It locates its precise coordinates on the page.\n"
-                "3. It covers up the old title and swaps it out with each new item from **Tab 2** one by one."
+                "3. It cleanly replaces it **only once** with each new item from **Tab 2**."
             )
 
 with tab2:
@@ -80,20 +80,21 @@ with tab2:
                         text_instances = target_page.search_for(search_query)
                         
                         if text_instances:
-                            # Loop through instances found (usually 1) and replace them
-                            for rect in text_instances:
-                                # Draw a white rectangle over the old title to hide/erase it completely
-                                target_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
-                                
-                                # Insert the new bulk title directly into that exact coordinate space
-                                target_page.insert_text(
-                                    (rect.x0, rect.y1), 
-                                    item_title, 
-                                    fontsize=font_size, 
-                                    color=(0.1, 0.1, 0.2)
-                                )
+                            # Take ONLY the very first distinct match block to avoid triple-stamping
+                            rect = text_instances[0]
+                            
+                            # Draw a white box over just that single matched area to erase it
+                            target_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+                            
+                            # Insert the new bulk title precisely 1 time
+                            target_page.insert_text(
+                                (rect.x0, rect.y1), 
+                                item_title, 
+                                fontsize=font_size, 
+                                color=(0.1, 0.1, 0.2)
+                            )
                         else:
-                            # Fallback if the target text string wasn't found verbatim in the PDF
+                            # Fallback if text isn't found verbatim
                             target_page.insert_text(
                                 (72, 150.0), 
                                 item_title, 
@@ -110,7 +111,7 @@ with tab2:
                         archive.writestr(final_file_name, compiled_pdf_bytes)
                 
                 zip_output_buffer.seek(0)
-                st.success(f"Successfully generated {len(titles_array)} unique PDF files by replacing the target title!")
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files with clean single-instance replacement!")
                 
                 st.download_button(
                     label="📦 Download All Bulk PDFs (ZIP)",

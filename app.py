@@ -1,3 +1,56 @@
+import streamlit as st
+import fitz  # PyMuPDF
+import io
+import zipfile
+
+st.set_page_config(page_title="Custom Bulk PDF Creator (Canva Style)", layout="wide")
+
+st.title("🎨 Canva-Style PDF Template & Bulk Generator")
+st.markdown("Upload a template PDF, specify the existing title to target, paste your bulk titles in double quotes, and generate your files instantly.")
+
+# Initialize Tabs properly at the top level
+tab1, tab2 = st.tabs(["1. Template Editor & Setup", "2. Bulk Title Generator Box"])
+
+# Store template in session state so both tabs can access it
+if "template_bytes" not in st.session_state:
+    st.session_state.template_bytes = None
+
+with tab1:
+    st.header("Upload & Configure Base PDF Template")
+    uploaded_file = st.file_uploader("Upload a sample PDF to use as your design template", type=["pdf"])
+    
+    if uploaded_file is not None:
+        st.session_state.template_bytes = uploaded_file.read()
+        st.success("Template uploaded successfully!")
+
+    # Initialize target_text_to_replace safely at root/tab1 scope
+    target_text_to_replace = "Boost Your Instagram Profile: Get Free Ig Likes in 2026 [CxD+9JH]"
+    font_size = 15
+
+    if st.session_state.template_bytes:
+        doc = fitz.open(stream=st.session_state.template_bytes, filetype="pdf")
+        page = doc[0] # Preview first page
+        
+        st.subheader("Target Text Replacement Setup")
+        st.markdown("Enter the **exact text string** currently written inside your uploaded PDF template that you want the tool to find and swap out:")
+        
+        col_set1, col_set2 = st.columns(2)
+        with col_set1:
+            target_text_to_replace = st.text_input(
+                "Existing Title to Find & Replace in PDF", 
+                value="Boost Your Instagram Profile: Get Free Ig Likes in 2026 [CxD+9JH]", 
+                help="Paste the exact title text currently sitting on your PDF design template."
+            )
+            font_size = st.slider("Replacement Font Size (Optional adjustment)", min_value=10, max_value=48, value=15)
+        
+        with col_set2:
+            st.info(
+                "**How it works:** \n"
+                "1. The tool locates your target title position vertically.\n"
+                "2. It uses an HTML-enabled rendering box that fully supports special characters like %, &, [, ], etc.\n"
+                "3. It replaces your text cleanly **once**, bolding and center-aligning your literal titles."
+            )
+
 with tab2:
     st.header("⚡ Bulk Title Processing Engine")
     
@@ -14,7 +67,6 @@ with tab2:
         
         file_rename_prefix = st.text_input("Custom File Rename Prefix:", value="tiktok_report_")
         
-        # Ensure this button is correctly indented under Tab 2
         if st.button("🚀 Generate Bulk PDFs"):
             if not bulk_input_box.strip():
                 st.error("Please provide at least one title in the box.")
@@ -94,6 +146,4 @@ with tab2:
                 st.download_button(
                     label="📦 Download All Bulk PDFs (ZIP)",
                     data=zip_output_buffer,
-                    file_name="canva_style_bulk_outputs.zip",
-                    mime="application/zip"
-                )
+                    file_name="canva_

@@ -42,7 +42,7 @@ with tab1:
             st.info(
                 "**How it works:** \n"
                 "1. The tool searches your uploaded PDF for the exact text specified on the left.\n"
-                "2. It locates its precise coordinates and centers the new bold title.\n"
+                "2. It calculates the center coordinates and renders your new title **bold and centered**.\n"
                 "3. It cleanly replaces it **only once** with each new item from **Tab 2**."
             )
 
@@ -85,12 +85,11 @@ with tab2:
                             # Draw a white box over just that single matched area to erase it
                             target_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
                             
-                            # Calculate horizontal centering and use bold font ('helv' with bold flag or standard bold font name)
-                            # PyMuPDF supports standard fonts: 'helv' (Helvetica), 'helv-bold', etc.
+                            # Use standard base font specification for bold formatting
                             font_name = "helv-bold"
                             
-                            # Measure text width to align it centrally inside the original rectangle width
-                            text_width = fitz.get_text_length(item_title, fontname=font_name, fontsize=font_size)
+                            # Measure text width using standard Base-14 code string for calculation compatibility
+                            text_width = fitz.get_text_length(item_title, fontname="helv", fontsize=font_size)
                             original_width = rect.x1 - rect.x0
                             
                             # Center alignment coordinate calculation

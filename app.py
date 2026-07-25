@@ -42,7 +42,7 @@ with tab1:
             st.info(
                 "**How it works:** \n"
                 "1. The tool searches your uploaded PDF for the exact text specified on the left.\n"
-                "2. It locates its precise coordinates on the page.\n"
+                "2. It locates its precise coordinates and centers the new bold title.\n"
                 "3. It cleanly replaces it **only once** with each new item from **Tab 2**."
             )
 
@@ -80,24 +80,38 @@ with tab2:
                         text_instances = target_page.search_for(search_query)
                         
                         if text_instances:
-                            # Take ONLY the very first distinct match block to avoid triple-stamping
                             rect = text_instances[0]
                             
                             # Draw a white box over just that single matched area to erase it
                             target_page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
                             
-                            # Insert the new bulk title precisely 1 time
+                            # Calculate horizontal centering and use bold font ('helv' with bold flag or standard bold font name)
+                            # PyMuPDF supports standard fonts: 'helv' (Helvetica), 'helv-bold', etc.
+                            font_name = "helv-bold"
+                            
+                            # Measure text width to align it centrally inside the original rectangle width
+                            text_width = fitz.get_text_length(item_title, fontname=font_name, fontsize=font_size)
+                            original_width = rect.x1 - rect.x0
+                            
+                            # Center alignment coordinate calculation
+                            centered_x = rect.x0 + (original_width - text_width) / 2
+                            if centered_x < rect.x0:
+                                centered_x = rect.x0 # Prevent text bleeding past left edge if too long
+                                
+                            # Insert the new bold, center-aligned title
                             target_page.insert_text(
-                                (rect.x0, rect.y1), 
+                                (centered_x, rect.y1), 
                                 item_title, 
+                                fontname=font_name,
                                 fontsize=font_size, 
                                 color=(0.1, 0.1, 0.2)
                             )
                         else:
-                            # Fallback if text isn't found verbatim
+                            # Fallback default alignment if text isn't found verbatim
                             target_page.insert_text(
                                 (72, 150.0), 
                                 item_title, 
+                                fontname="helv-bold",
                                 fontsize=font_size, 
                                 color=(0.1, 0.1, 0.2)
                             )
@@ -111,7 +125,7 @@ with tab2:
                         archive.writestr(final_file_name, compiled_pdf_bytes)
                 
                 zip_output_buffer.seek(0)
-                st.success(f"Successfully generated {len(titles_array)} unique PDF files with clean single-instance replacement!")
+                st.success(f"Successfully generated {len(titles_array)} unique PDF files with centered, bold title replacements!")
                 
                 st.download_button(
                     label="📦 Download All Bulk PDFs (ZIP)",
